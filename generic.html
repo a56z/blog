@@ -1,0 +1,209 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>Portfolio Page - by Enrique Folte</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="stylesheet" href="/blog/assets/css/main.css" />
+		<noscript><link rel="stylesheet" href="/blog/assets/css/noscript.css" /></noscript>
+	</head>
+	<body class="is-preload">
+
+		<!-- Wrapper -->
+			<div id="wrapper">
+
+				<!-- Header -->
+					<header id="header">
+						<a href="index.html" class="logo">Portfolio</a>
+					</header>
+
+				<!-- Nav -->
+					<nav id="nav">
+						<ul class="links">
+							<li><a href="/blog/index.html">My Portfolio</a></li>
+							<li class="active"><a href="generic.html">My Projects</a></li>
+						</ul>
+						<ul class="icons">
+							<li><a href="https://www.linkedin.com/in/enriquefolte" class="icon brands fa-linkedin"><span class="label">LinkedIn</span></a></li>
+							<li><a href="https://github.com/a56z" class="icon brands fa-github"><span class="label">GitHub</span></a></li>
+						</ul>
+					</nav>
+
+				<!-- Main -->
+					<div id="main">
+
+
+						<!-- Post -->
+							<section class="post">
+								<header class="major">
+									<h1><a href="https://radiant-retreat-88590.herokuapp.com">How I built a Twitter Clone with Rails 6</a></h1>
+									<p>The focus of this blog post is on general skills <br />
+									that are useful no matter which specific<br />
+									technology you end up using</p>
+								</header>
+								<div class="image main"><img src="/blog/images/programming.jpg" alt="" /></div>
+								<p>I got inspired by Michael Hartl's Rails Tutorial to build what's a professional-grade sample application. So here's the summary of how I did it.</p>
+
+
+<p>To get the skeleton of the app set up it is useful to start off with some static pages, in this case with <i>Home</i> &amp; <i>Help</i>, it turns out that with Rails this works just as smooth as making data-backed dynamic pages.</p>
+<p>For me the main novelty compared to the bootcamp was that I started writing tests instead of jumping into coding straight away. I wrote actually quite a few:</p>
+<div class="figure">
+<img src="/blog/images/testing_pytter.jpg" /><p class="caption">Tests for pytter</p>
+</div>
+<p>The case for testing your app aka TDD is given with 3 scenarios:</p>
+<ul>
+<li>Tests protect agains regressions, where a functioning feature stops working for some reason.</li>
+<li>Tests allow you to refactor (changing form without changing its funciton) with greater confidence</li>
+<li>Tests act a client for the application code, thereby helping determine its design and its interface with other parts of the system.*MH</li>
+</ul>
+<p>The roadmap for the app is as follows, using Rails MVC</p>
+<ol style="list-style-type: decimal">
+<li><p>Creating a data model for users and store that data</p></li>
+<li><p>Give users the ability to sign up and create a user profile</p></li>
+<li><p>Once they sign up, let them log in &amp; log out.</p></li>
+<li><p>Protect pages from improper access</p></li>
+<li><p>Account activations (confirming a valid email address) and password resets</p></li>
+</ol>
+<p>(in short developing a full Rails login and authentication system without the use of devise.</p>
+<p>[Devise][https://github.com/plataformatec/devise] has proven to be a robust solution for professional-grade applications, however for learning purposes and for being able to modify it to meet my particular needs deconstructing it first comes in handy.</p>
+<p>So, starting with the user data model</p>
+<div class="figure">
+<img src="/blog/images/user_model.jpg" alt="User model" /><p class="caption">User model</p>
+</div>
+<p>So that has_secure_password can work its magic it needs to have the password_digest attribute, so it's basically a hashed password. We do this by generating a migration for the password_digest column like so:</p>
+<p><code>rails generate migration add_password_digest_to_users password_digest:string</code></p>
+<p>With this Rails figures out how to do the rest. I skipped the validations part in this post, they are worth mentioning at least here since they enforce several important security constraints.</p>
+<p>The way the signup works is that you use and HTML form to submit user signup information which is then used to create a new user and save its attributes to the database. Then, render the profile page with the newly created user's information. Beginning with the 'view' serves as a good first step towards implementing the REST architecture for users which ends up looking much like this after configuring the routes:</p>
+<pre><code>following_user GET    /users/:id/following(.:format)                                                           users#following
+                       followers_user GET    /users/:id/followers(.:format)                                                           users#followers
+                                users GET    /users(.:format)                                                                         users#index
+                                      POST   /users(.:format)                                                                         users#create
+                             new_user GET    /users/new(.:format)                                                                     users#new
+                            edit_user GET    /users/:id/edit(.:format)                                                                users#edit
+                                 user GET    /users/:id(.:format)                                                                     users#show
+                                      PATCH  /users/:id(.:format)                                                                     users#update
+                                      PUT    /users/:id(.:format)                                                                     users#update
+                                      DELETE /users/:id(.:format)                                                                     users#destroy</code></pre>
+<p>It also turns out to be helpful making use of the debugger, so whenever you're uncertain about a particular section of your code just put <code>debugger</code> into it and interact with your code as in the console.</p>
+<h3>Logging in</h3>
+<p>Since HTTP is a stateless protocol there is no way within the Hypertext Transfer Protocol to remember a user’s identity from page to page which is why web apps requiring user login must use a session, which is a semi-permanent connection between two computers (such as a client computer running a web browser and a server running Rails). For this it's convenient to make use of cookies, which are small pieces of text placed on the user’s browser.</p>
+<p>These are the standart RESTful actions for sessions</p>
+<pre><code>root GET    /                                                                                        static_pages#home
+                                 help GET    /help(.:format)                                                                          static_pages#help
+                                about GET    /about(.:format)                                                                         static_pages#about
+                              contact GET    /contact(.:format)                                                                       static_pages#contact
+                               signup GET    /signup(.:format)                                                                        users#new
+                                login GET    /login(.:format)                                                                         sessions#new
+                                      POST   /login(.:format)                                                                         sessions#create
+                               logout DELETE /logout(.:format)                                                                        sessions#destroy</code></pre>
+<p>For making the site somewhat more responsive it's a good idea to use flash notifications, which are temporary messages that pop up upon a user's action. You would want to put this into your SessionsController, here with the login example:</p>
+<pre class="sourceCode ruby"><code class="sourceCode ruby"><span class="kw">def</span> create
+    user = <span class="dt">User</span>.find_by(email: params[<span class="st">:session</span>][<span class="st">:email</span>].downcase)
+    <span class="kw">if</span> user &amp;&amp; user.authenticate(params[<span class="st">:session</span>][<span class="st">:password</span>])
+      <span class="co"># Log the user in and redirect to the user&#39;s show page.</span>
+    <span class="kw">else</span>
+      flash[<span class="st">:danger</span>] = <span class="st">&#39;Invalid email/password combination&#39;</span>
+      render <span class="st">&#39;new&#39;</span>
+    <span class="kw">end</span>
+  <span class="kw">end</span></code></pre>
+<h3 id="login-upon-signup">Login upon signup</h3>
+<p>To log in new users automatically as part of the signup process I added a call to the log_in method in the Users controller <code>create</code> action</p>
+
+<pre class="sourceCode ruby"><code class="sourceCode ruby"><span class="kw">class</span> <span class="dt">UsersController</span> &lt; <span class="dt">ApplicationController</span>
+
+  <span class="kw">def</span> show
+    <span class="ot">@user</span> = <span class="dt">User</span>.find(params[<span class="st">:id</span>])
+  <span class="kw">end</span>
+
+  <span class="kw">def</span> new
+    <span class="ot">@user</span> = <span class="dt">User</span>.new
+  <span class="kw">end</span>
+
+  <span class="kw">def</span> create
+    <span class="ot">@user</span> = <span class="dt">User</span>.new(user_params)
+    <span class="kw">if</span> <span class="ot">@user</span>.save
+      log_in <span class="ot">@user</span>
+      flash[<span class="st">:success</span>] = <span class="st">&quot;Welcome to PYTTER!&quot;</span>
+      redirect_to <span class="ot">@user</span>
+    <span class="kw">else</span>
+      render <span class="st">&#39;new&#39;</span>
+    <span class="kw">end</span>
+  <span class="kw">end</span>
+
+  <span class="kw">private</span>
+
+    <span class="kw">def</span> user_params
+      params.require(<span class="st">:user</span>).permit(<span class="st">:name</span>, <span class="st">:email</span>, <span class="st">:password</span>,
+                                   <span class="st">:password_confirmation</span>)
+    <span class="kw">end</span>
+<span class="kw">end</span></code></pre>
+<p>At this point the app has a fully functional login and authentication system. But for taking the app to the next level we need to be able to remember users for longer than the browser session. As mentioned before the way to go is with cookies, however, persistent cookies are vulnerable to session highjacking. There are four ways to steal cookies:</p>
+<ol style="list-style-type: decimal">
+<li>using packet sniffers</li>
+<li>compromising a database containing remember tokens</li>
+<li>Cross-site-scriting (XSS)</li>
+<li>gaining physical access to a machine with a logged-in user</li>
+</ol>
+<p>The first one is prevented by using SSL or Secure Sockets Layer.</p>
+<p>We'll prevent the second problem by storing a hash digest of the remember tokens instead of the token itself (note that has_secure_token added in Rails 5 stores the corresponding token in the database as unhashed cleartext!).</p>
+<p>Rails prevents the third problem by escaping any content inserted into view templates.</p>
+<p>The fourth problem is handled by changing tokens every time a user logs out and taking care to cryptographically sign any potentially sensitive information placed in the browser.</p>
+<p>Hence the user model needs to be updated:</p>
+<div class="figure">
+<img src="/blog/images/updated_user_model.jpg" alt="Updated User model" /><p class="caption">Updated User model</p>
+</div>
+<p>Having created a working user.remember method, it is possible to create a persistent session by storing a user's (encrypted) id and remember token as permanent cookies on the browser. The way to do this is with the cookies method, which (as with session) can be treated as a hash:</p>
+<pre class="sourceCode ruby"><code class="sourceCode ruby">cookies[<span class="st">:remember_token</span>] = { value:   remember_token,
+                             expires: <span class="dv">20</span>.years.from_now.utc }</code></pre>
+<p>Once we implement the RESTful actions users can sign up, log in, log out, view their profiles, edit their settings and see an index of all users, adding an admin with boolean true(default: false) will allow you to give this user extra permissins, say 'destroy'(delete) other users for example.</p>
+<h3 id="account-activation">Account activation</h3>
+<p>The way this works is that users come with an &quot;unactivated&quot; state. When signing up you need to generate an activation token and a corresponding activation digest method. Then safe activation digest to the database and send an email with a link containing the activation token and his email address. Once he clicks that link you can activate the user by comparing the email address with the activation digest. If successful you should change the users status to activated.</p>
+<p>The migration for account activation looks like this:</p>
+<pre class="sourceCode ruby"><code class="sourceCode ruby"><span class="kw">class</span> <span class="dt">AddActivationToUsers</span> &lt; <span class="dt">ActiveRecord</span>::<span class="dt">Migration</span>[<span class="fl">6.0</span>]
+  <span class="kw">def</span> change
+    add_column <span class="st">:users</span>, <span class="st">:activation_digest</span>, <span class="st">:string</span>
+    add_column <span class="st">:users</span>, <span class="st">:activated</span>, <span class="st">:boolean</span>, default: <span class="dv">false</span>
+    add_column <span class="st">:users</span>, <span class="st">:activated_at</span>, <span class="st">:datetime</span>
+  <span class="kw">end</span>
+<span class="kw">end</span></code></pre>
+<p>With the following routes for account_activation</p>
+<pre class="sourceCode ruby"><code class="sourceCode ruby">resources <span class="st">:account_activations</span>, only: [<span class="st">:edit</span>]</code></pre>
+<p>For sending out activation emails you can use SendGrid, which is available as an add-on at Heroku. It's limited to 400 emails per day at zero cost.</p>
+<p>Just add it to your app as follows:</p>
+<pre><code>$ heroku addons:create sendgrid:starter</code></pre>
+<h3 id="section"></h3>
+<h3 id="user-posts">User posts</h3>
+<p>When building web apps its essential to make associations between individual models. In this case each post is associated with one user, and each user is associated with (potentially) many posts:</p>
+<div class="figure">
+<img src="/blog/images/association1.jpg" alt="association1" width="100%" height="60%" /><p class="caption">association1</p>
+</div>
+<p><code>has_many</code> relationship between a user and its posts:</p>
+<div class="figure">
+<img src="/blog/images/associations2.jpg" alt="associations2" width="100%" height="60%" /><p class="caption">associations2</p>
+</div>
+<p>So in order to make a post through its association with a user we now have</p>
+<pre class="sourceCode ruby"><code class="sourceCode ruby">user.post.build     </code></pre>
+<p>instead of</p>
+<pre class="sourceCode ruby"><code class="sourceCode ruby"><span class="dt">Post</span>.new</code></pre>
+<h3 id="image-resizing">Image resizing</h3>
+<p>For resizing images in the feed I use ImageMagick which is a Ruby gem that you can install on macOS with <code>brew install imagemagick</code> and <code>$ sudo apt-get -y install imagemagick</code> on Linux respectively.</p>
+<p>Using the resize_to_limit option this allows you to get width and height to a max of 500 pixels as follows</p>
+<p><code>image.variant(resize_to_limit: [500, 500])</code></p>
+<p>As for hosting you can use AWS (IAM), creating an S3 bucket and you should be good, though setting up S3 can be challenging. So if you need help with this reach out ;-)</p>
+<h3 id="following-users">Following users</h3>
+<p>This part actually is quite challenging. The page flow runs as follows:</p>
+<p>A user starts at his profile page, navigates to the Users page to select a user to follow. He navigates to the profile of a second user, clicks the &quot;follow&quot; button to follow that user. This changes the button to &quot;unfollow&quot; and increments his follower's count by one. Navigating to his home page, he now sees an incremented &quot;following&quot; count and find the other user's posts in his status feed.</p>
+<h4 id="the-relationship-model">The Relationship model</h4>
+<p>Considering a user who follows a second user the set of all users following a given user is that user's followers, and user_name.followers is an array of those users. However the reverse doesn't work. By default the set of all followed users would be called followes. This discussion suggests modelling the followed users as follows with a following table and a has_many association.</p>
+<div class="figure">
+<img src="/blog/images/association_following.jpg" alt="association following" width="100%" height="60%" /><p class="caption">association following</p>
+</div>
+<p>Since each row is a user we need to include the user's other attributes such as name, email, password etc, which is a maintainability nightmare.</p>
+<p>This leads to two questions: When a user follows another user, what is being created? When a user unfollows another user, what is being destroyed? Upon reflection, we see that in these cases the application should either create or destroy a relationship between two users. A user then has many relationships, and has many following (or followers) through these relationships.</p>
+<p>There's one more thing to bear in mind: unlike symmetric Facebook-style friendships, ,which are always reciprocal Twitter-style following relationships are potentially asymmetric. To distinguish between these two cases it's good practice to adopt active and passive relationships. If Ernie is following Bert but not vice versa Ernie has an active relationship with Bert and Bert has a passive relationship with Ernie.</p>
+<div class="figure">
+<img src="/blog/images/followed_through_active_relationships.jpg" alt="followed_through_active_relationships" width="100%" height="60%" /><p class="caption">followed_through_active_relationships</p>
+
+<p>And that's it. I hope you found this stuff useful. <br>
+🙋🏻‍♂️💻🚀</p>
+</div>
